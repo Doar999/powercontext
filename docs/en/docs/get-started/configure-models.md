@@ -115,7 +115,7 @@ The commands use Bash; on Windows, use Git Bash. JSON parsing runs Python throug
 ```bash
 SCOPE_ID="$(curl -fsS http://127.0.0.1:8000/v1/scopes/default \
   | uv run --no-project --python ">=3.11,<4" python -c 'import json, sys; print(json.load(sys.stdin)["scope_id"])')"
-SOURCE_ID="model-check-$(date +%s)-$$"
+SOURCE_ID="quickstart-$(date +%s)-$$"
 curl -fsS -X POST http://127.0.0.1:8000/v1/sources/content \
   -H 'content-type: application/json' \
   -d "{\"scope_id\":\"${SCOPE_ID}\",\"source_id\":\"${SOURCE_ID}\",\"content\":\"Project decision: use uv for Python dependency management. Preserve this decision for future maintainers.\"}"
