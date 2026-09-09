@@ -1,149 +1,170 @@
 ---
 title: Install and run
-description: Install PowerContext from Git and run the local Server.
+description: Install PowerContext, choose a release and installation method, and manage a local Server.
 ---
 
 # Install and run
 
-Start with the [Quick Start](quickstart.md) for your first session. This page covers version selection,
-platforms, installation roles, startup, diagnostics, and updates.
+For your first Agent connection, follow [Quick start](quickstart.md) through installation, model configuration, and verification. Use this guide to choose an installation method, version, platform, or optional database.
 
-## Platform support
+## Platforms and prerequisites
 
-| Platform | Status |
-| --- | --- |
-| macOS, Linux | Supported |
-| Windows | `experimental` |
+| Platform | Status | Installation entry point |
+| --- | --- | --- |
+| macOS, Linux | Supported | Bash installer or uv |
+| Windows | `experimental` | Install uv in PowerShell, then install PowerContext |
 
-Windows CLI, Server, and personal-service support is experimental. Each Agent Host still has its own platform
-requirements. Examples using Bash syntax require a Bash environment and cannot be pasted directly into PowerShell.
-Embedded seekDB is unavailable on Windows.
+The script needs Bash, curl or wget, and access to the installation and package download services. It reuses existing uv and Python 3.11+ installations. It installs uv only when missing and downloads Python 3.12 only when no compatible local interpreter is found.
+You do not need Python installed beforehand or have to change system Python.
 
-## Choose a version
-
-Keep a released package and integration on the same tag. For example, install `0.2.0`:
-
-```bash
-uv tool install "powercontext[cli,server]==0.2.0"
-```
-
-The following examples use `master`, including unreleased capabilities. Check the
-[capability matrix](../integrations/capabilities.md); `master_only` and `experimental` capabilities
-are not release guarantees.
+Agent integration setup also requires Git and the host's own prerequisites. The script does not install Agent applications. Without Git, use `--no-hosts` to install the Runtime first.
+On Windows, individual hosts and databases have their own platform requirements. Embedded seekDB does not support Windows.
 
 ## Install the application
 
-You need Python 3.11 or newer, Git, and [`uv`](https://docs.astral.sh/uv/) on macOS, Linux, or Windows. Then install
-PowerContext directly from a Git ref:
+On macOS/Linux, choose the script, an existing uv installation, or a virtual environment created with an existing Python installation. All three methods install the CLI, Server, and default SQLite backend.
 
-```bash
-uv tool install --force "powercontext[cli,server] @ git+https://github.com/oceanbase/powercontext.git@master"
+```bash tab="Install script"
+curl -fsSL https://powercontext.oceanbase.io/install.sh -o powercontext-install.sh
+bash powercontext-install.sh --no-hosts
+export PATH="$HOME/.local/bin:$PATH"
 ```
 
-The command does not leave a repository checkout for you to manage. Git uses its normal credential configuration,
-including credential helpers and SSH settings. For an SSH-based install, replace the HTTPS URL with the Git URL
-approved for your environment. `--force` also refreshes an existing tool from the current commit behind the selected
-Git ref; without it, `uv` may report the same requirement as already installed without fetching a newer `master`.
-
-To install a tested branch or tag, replace `master` after the final `@`.
-Follow the [guide for each integration](../integrations/index.md) for Agent installation, connection options, and verification, using the same ref as the Server.
-
-## Run the local Server
-
-```bash
-powercontext server run
+```bash tab="Existing uv"
+uv tool install --python ">=3.11,<4" "powercontext[cli,server]==0.2.0"
+export PATH="$(uv tool dir --bin):$PATH"
 ```
 
-With no environment variables, the Server:
+```bash tab="pip + venv"
+python3 -m venv .venv
+. .venv/bin/activate
+python -m pip install "powercontext[cli,server]==0.2.0"
+```
 
-- binds to `127.0.0.1:8000`;
-- enables Streamable HTTP MCP at `/mcp`;
-- creates a default Scope and enables the Dashboard at `/`;
-- creates a persistent SQLite database in the operating system's user data directory;
-- supports explicit Memory operations without an inference provider.
+The pip method requires Python 3.11+ with venv support. uv obtains Python if it is missing.
+For custom directories, use the `PATH` command printed by the script. `export` affects only the current terminal. To persist the executable path, run `uv tool update-shell` and reopen your terminal.
 
-After startup, the terminal prints the Dashboard URL, such as `http://127.0.0.1:8000/`. The Dashboard shares the
-Server listener and port with the HTTP API and MCP. If Dashboard initialization fails, the Server logs a warning with
-the direct cause and continues serving the other interfaces. Set `POWERCONTEXT_SERVER_DASHBOARD_ENABLED=false` to
-disable the Dashboard explicitly.
+On Windows, use these commands. They reuse uv when it is already available:
 
-`Ctrl-C` performs a clean shutdown. Restarting the command reopens the same database.
+```powershell
+$env:Path = "$HOME\.local\bin;$env:Path"
+if (-not (Get-Command uv -ErrorAction SilentlyContinue)) {
+    Invoke-WebRequest https://astral.sh/uv/install.ps1 -OutFile uv-install.ps1
+    powershell -ExecutionPolicy Bypass -File .\uv-install.ps1
+}
+uv tool install --python ">=3.11,<4" "powercontext[cli,server]==0.2.0"
+$env:Path = "$(uv tool dir --bin);$env:Path"
+```
 
-This minimal launch does not enable model-backed extraction or vector search. To generate and validate one explicit
-environment file for those capabilities, continue with the
-[Enable extraction and vector search](configure-models.md).
+See the [uv installation guide](https://docs.astral.sh/uv/getting-started/installation/) for other ways to obtain uv.
+If uv, Python, or PyPI downloads fail, use [Configure package indexes](configure-package-index.md) to identify which service failed.
+
+### Installer behavior
+
+You can inspect the downloaded script or read its [source](https://github.com/oceanbase/powercontext/blob/master/website/public/install.sh).
+The script checks `PATH` and `~/.local/bin` for uv, then uses uv to find a compatible local Python, including interpreters previously downloaded by uv. When one is found, the script selects it and disables further Python downloads. It does not upgrade existing uv.
+It then installs PowerContext in its user tool environment, checks that the CLI starts, and prints the model configuration guide.
+It preserves existing uv settings. It does not write global package index settings, model credentials, or a Server environment file, and does not register a personal service.
+
+To install integrations at the same time, select hosts explicitly:
+
+```bash
+bash powercontext-install.sh --version 0.2.0 --host codex --host claude-code
+```
+
+Without host options, an interactive terminal opens `powercontext setup select`. Automation must pass `--host` or `--no-hosts`.
+Downloading the file before running it preserves interactive input. If you pipe the script to Bash, pass those options explicitly.
+Installation and verification use the existing `setup` commands. A failed host returns a nonzero status with results; the installed Runtime remains available.
+After fixing host prerequisites, retry its `powercontext setup` command with the same release tag.
+
+## Choose a version
+
+Use a stable release for normal use. Keep the Runtime package and Agent integration on the same release.
+These examples show both commands together for Codex, which must already be installed and configured before setup.
+
+```bash tab="Stable release"
+uv tool install --python ">=3.11,<4" "powercontext[cli,server]==0.2.0"
+powercontext setup codex --ref powercontext-v0.2.0
+```
+
+```bash tab="Prerelease"
+uv tool install --python ">=3.11,<4" "powercontext[cli,server]==<version>"
+powercontext setup codex --ref "powercontext-v<version>"
+```
+
+```bash tab="Development source"
+POWERCONTEXT_REF="$(git ls-remote https://github.com/oceanbase/powercontext.git refs/heads/master | cut -f1)"
+uv tool install --python ">=3.11,<4" --force "powercontext[cli,server] @ git+https://github.com/oceanbase/powercontext.git@${POWERCONTEXT_REF}"
+powercontext setup codex --ref "$POWERCONTEXT_REF"
+```
+
+Replace both `<version>` placeholders with the same published prerelease. A version such as `0.3.0rc1` illustrates the format; it does not claim that release exists.
+If no prerelease is available, use the stable release rather than falling back to `master`.
+The source example uses Bash to resolve `master` to a single commit for both installations. Source capabilities may be unreleased; check the [capability matrix](../integrations/capabilities.md).
+
+The script also accepts `--version` and uses the matching `powercontext-v<version>` integration tag. It supports releases using that naming convention from `0.1.0` onward.
+An unavailable version fails instead of downgrading. See [Configure package indexes](configure-package-index.md) for mirror synchronization delays.
+
+## Configure and start the Server
+
+After [configuring models](configure-models.md), validate and start with the same environment file:
+
+```bash
+powercontext config validate --env-file .env
+powercontext server run --env-file .env
+```
+
+The Server listens on `127.0.0.1:8000`, serves the Dashboard at `/` and MCP at `/mcp`, and stores SQLite data in the user data directory.
+Press `Ctrl-C` to stop it. Restarting with the same data directory restores existing data.
+
+If you only need explicit Memory writes and full-text search, `powercontext server run` works without models.
+That mode does not enable model extraction or vector search. Automatic extraction needs a generation model and a schedule; vector search also needs embeddings.
+
+Check the service from another terminal:
+
+```bash
+powercontext doctor
+powercontext ready
+powercontext capabilities
+```
+
+`doctor` checks packages, Server liveness, and readiness. Runtime or database failures return `not_ready`; a configured inference service failure returns `degraded`.
+See [Troubleshoot](../operate/troubleshoot.md) for status details. For persistent services, Docker, authentication, or remote access, see [Deploy the Server](../operate/deploy-server.md).
 
 ## Use embedded seekDB
 
-Embedded seekDB is available on Linux and macOS when a compatible `pylibseekdb` wheel is available. Windows does not
-support this embedded backend. Install or replace the tool with the optional seekDB extra:
+On Linux/macOS systems with a compatible `pylibseekdb` wheel, add the seekDB extra to the installation:
 
 ```bash
-uv tool install --force "powercontext[cli,server,seekdb] @ git+https://github.com/oceanbase/powercontext.git@master"
+uv tool install --python ">=3.11,<4" "powercontext[cli,server,seekdb]==0.2.0"
 ```
 
-When switching from SQLite, remove `POWERCONTEXT_SERVER_DATABASE_URL` from the Server process environment. An explicit
-SQLAlchemy database URL is not valid for seekDB. Then select the backend and start the Server:
+Set `POWERCONTEXT_SERVER_DATABASE_KIND=seekdb` in `.env` and remove `POWERCONTEXT_SERVER_DATABASE_URL`.
+seekDB does not accept an explicit SQLAlchemy database URL and uses its built-in `test` database.
+Its default path is `seekdb` within the user data directory, or `$POWERCONTEXT_HOME/seekdb` when `POWERCONTEXT_HOME` is set.
+Use `POWERCONTEXT_SERVER_DATABASE_PATH` for a custom path. Switching backends does not migrate existing SQLite data.
+
+## Update an installation
+
+Read the target release notes, then update the Runtime and the integrations you use to that exact release:
 
 ```bash
-unset POWERCONTEXT_SERVER_DATABASE_URL
-export POWERCONTEXT_SERVER_DATABASE_KIND=seekdb
-powercontext server run
+uv tool install --python ">=3.11,<4" "powercontext[cli,server]==<version>"
+powercontext setup codex --ref "powercontext-v<version>"
 ```
 
-The CLI does not search for a `.env` file automatically. Export these values in the shell, configure them in the
-process manager or container, or pass a specific file with `powercontext server run --env-file <path>`.
-
-PowerContext always uses seekDB's built-in `test` database. Leave `POWERCONTEXT_SERVER_DATABASE_PATH` unset to store
-the instance in the `seekdb` subdirectory of the PowerContext user data directory. If `POWERCONTEXT_HOME` is set, the
-default is `$POWERCONTEXT_HOME/seekdb`; set `POWERCONTEXT_SERVER_DATABASE_PATH` only when a different location is
-required.
-
-In another terminal, verify that the Server and database are ready:
-
-```bash
-powercontext doctor
-powercontext ready
-powercontext capabilities
-```
-
-## Verify the installation
-
-```bash
-powercontext doctor
-powercontext ready
-powercontext capabilities
-```
-
-`doctor` checks the installed package, Server liveness, and Server readiness without requiring an integration. Server
-readiness covers the database and each configured inference provider. Runtime or database failures return
-`not_ready`; an inference failure returns `degraded` without removing database-backed operations from traffic.
-`ready` and `capabilities` show the readiness and enabled capabilities of the running service.
-For Agent diagnostics, use the [guide for each integration](../integrations/index.md). For Server status definitions and recovery steps, see [Troubleshoot](../operate/troubleshoot.md).
-
-For a long-running process, Docker, authentication, or remote access, continue with
-[Deploy the Server](../operate/deploy-server.md).
-
-## Update or replace an installation
-
-To replace the installed tool with a chosen ref:
-
-```bash
-uv tool install --force "powercontext[cli,server] @ git+https://github.com/oceanbase/powercontext.git@<ref>"
-```
-
-Update each installed host using its [integration guide](../integrations/index.md) and the same ref. Restart the Server and open a new host session
-after updating. Existing SQLite data remains in the user data directory unless `POWERCONTEXT_HOME` or the database URL
-changes.
+Replace both `<version>` placeholders before running the commands. Restart the Server, then start a new Agent session.
+A pinned uv tool installation retains its version constraint; `uv tool upgrade powercontext` does not cross that constraint.
+You can rerun the installer with a new `--version`; selected hosts must be updated together.
+Package updates do not delete data, but database compatibility and migration requirements depend on the target release notes.
 
 ## Install a Python role
 
-An application that imports the async Client SDK should add it to that application's environment:
+If your application imports the asynchronous Client SDK, add the dependency to that application's environment:
 
 ```bash
-uv add "powercontext[client] @ git+https://github.com/oceanbase/powercontext.git@master"
+uv add "powercontext[client]==0.2.0"
 ```
 
-Use `builtin` for in-process Python composition, `server` for the service, `client` for the Python SDK, or `cli` for
-the Server-backed command line. An extra that is only present in the isolated `uv tool` environment is not importable
-by an unrelated Python project.
+Use `client` for the Python SDK, `builtin` for in-process composition, `server` for the service, and `cli` for commands.
+Packages in a uv tool environment cannot be imported directly by another Python project. See [Interfaces](../develop/interfaces.md) for usage.

@@ -3,8 +3,9 @@
   "pages": [
     "quickstart",
     "install-and-run",
-    "configure-server-environment",
+    "configure-package-index",
     "configure-models",
+    "configure-server-environment",
     "core-concepts"
   ]
 }

@@ -24,30 +24,42 @@ PowerContext は、会話をまたいでもコンテキストを作業ととも�
 
 ## 利用中の Agent と接続する
 
-最新リリースの [PowerContext](https://pypi.org/project/powercontext/) をインストールします：
+macOS/Linux では Bash と curl でインストールします。スクリプトは既存の uv と Python 3.11+ を再利用し、不足している場合のみダウンロードします：
 
 ```bash
-uv tool install "powercontext[cli,server]==0.2.0"
+curl -fsSL https://powercontext.oceanbase.io/install.sh -o powercontext-install.sh
+bash powercontext-install.sh --no-hosts
+export PATH="$HOME/.local/bin:$PATH"
+powercontext config init --output .env
 ```
 
-別のターミナルでローカル Server を起動します：
+スクリプトはリリース `0.2.0` をインストールします。Python や uv の事前インストールは不要です。Windows（`experimental`）、既存の uv、pip を使用する場合は[インストールガイド](https://powercontext.oceanbase.io/en/docs/get-started/install-and-run/)を参照してください。カスタムディレクトリを使う場合は、スクリプトが表示するコマンドで `PATH` を設定してください。
+
+Server を起動する前に `.env` を編集し、生成モデルと認証情報を追加します。以下は OpenAI の例です：
+
+```dotenv
+OPENAI_API_KEY=replace-with-your-api-key
+POWERCONTEXT_SERVER_INFERENCE_GENERATION_MODEL=openai-chat:gpt-4.1-mini
+POWERCONTEXT_SERVER_RUNTIME_SCHEDULE_SECONDS=60
+```
+
+Server はこのモデルを使って、収集した Source から Memory を抽出します。Agent のモデル設定やログイン情報は自動的に引き継ぎません。`.env` を Git にコミットしないでください。他のサービスやベクトル検索の設定は[モデル設定ガイド](https://powercontext.oceanbase.io/en/docs/get-started/configure-models/)を参照してください。
+
+設定を検証し、専用のターミナルで Server を起動します：
 
 ```bash
-powercontext server run
+powercontext config validate --env-file .env
+powercontext server run --env-file .env
 ```
 
-Server はデフォルトで、コンテキストをローカルの SQLite データベースに保存します。
-
-次に同じリリースから Agent との連携を設定します。例：
+Server はデフォルトでローカルの SQLite にコンテキストを保存します。別のターミナルで、同じリリースの Agent 連携を設定します。以下はインストール済みの Codex を使う例です（Git が必要です）：
 
 ```bash
 powercontext setup codex --ref powercontext-v0.2.0
+powercontext doctor codex
 ```
 
-PowerContext ツールと Agent 連携には、常に同じ Git ref を使用してください。`master` のインストール、他の Agent、
-個人用サービスの設定は [Quick Start](https://powercontext.oceanbase.io/en/docs/get-started/quickstart/) と
-[インストールガイド](https://powercontext.oceanbase.io/en/docs/get-started/install-and-run/)を参照してください。
-Python 3.11+ が必要です。macOS と Linux をサポートし、Windows のサポートは `experimental` です。
+[Quick start](https://powercontext.oceanbase.io/en/docs/get-started/quickstart/)でモデルの準備状態とセッション間の記憶を確認してください。ダウンロードに失敗した場合は[パッケージインデックスの設定](https://powercontext.oceanbase.io/en/docs/get-started/configure-package-index/)を参照してください。
 
 Codex は `official`、他のホストと Python Agent フレームワークは `community`、Bub は評価専用の `evaluation` です。
 これらは PowerContext 連携のメンテナンス主体と用途を示すタグです。対応機能と利用可能なバージョンは

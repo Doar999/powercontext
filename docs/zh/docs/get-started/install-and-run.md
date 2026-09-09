@@ -1,138 +1,169 @@
 ---
 title: 安装和运行
-description: 从 Git 安装 PowerContext，并运行本地 Server。
+description: 安装 PowerContext、选择发布版本和安装方式，并管理本地 Server。
 ---
 
 # 安装和运行
 
-首次使用请从 [Quick Start](quickstart.md)开始。本页说明版本选择、平台要求、安装角色、启动、诊断和更新。
+首次接入 Agent 时，请按[快速开始](quickstart.md)完成安装、模型配置和验证。本页用于选择安装方式、版本、平台和可选数据库。
 
-## 平台支持
+## 平台与前置条件
 
-| 平台 | 状态 |
-| --- | --- |
-| macOS、Linux | 支持 |
-| Windows | `experimental` |
+| 平台 | 状态 | 安装入口 |
+| --- | --- | --- |
+| macOS、Linux | 支持 | Bash 脚本或 uv |
+| Windows | `experimental` | PowerShell 中安装 uv，再安装 PowerContext |
 
-Windows 的 CLI、Server 和个人服务支持为试验性；各 Agent Host 仍需满足自身的平台要求。
-使用 Bash 语法的示例需要 Bash 环境，不可直接粘贴到 PowerShell。嵌入式 seekDB 不支持 Windows。
+使用脚本只需 Bash、curl 或 wget，以及能访问安装站点和包下载服务的网络。脚本复用已有的 uv 和 Python 3.11+；只有缺少 uv 时才安装 uv，找不到兼容的本地 Python 时才下载 Python 3.12。
+你不需要预先安装 Python，也不需要修改系统 Python。
 
-## 选择版本
-
-发布版与集成使用相同 tag。例如安装 `0.2.0`：
-
-```bash
-uv tool install "powercontext[cli,server]==0.2.0"
-```
-
-后续示例使用 `master`，包含尚未发布的能力。核对[能力矩阵](../integrations/capabilities.md)，
-不要将 `master_only` 或 `experimental` 能力当作发布版承诺。
+安装 Agent 集成还需要 Git，以及对应宿主要求的工具。脚本不会安装 Agent 应用；缺少 Git 时，可先用 `--no-hosts` 安装 Runtime。
+Windows 的宿主与数据库支持取决于各自的平台要求，嵌入式 seekDB 不支持 Windows。
 
 ## 安装应用
 
-需要在 macOS、Linux 或 Windows 上准备 Python 3.11 或更新版本、Git 和
-[`uv`](https://docs.astral.sh/uv/)，然后从指定 Git ref 直接安装 PowerContext：
+macOS/Linux 可选择自动脚本、已有 uv，或已有 Python 的虚拟环境。下面三种方式都安装 CLI、Server 和默认 SQLite 后端。
 
-```bash
-uv tool install --force "powercontext[cli,server] @ git+https://github.com/oceanbase/powercontext.git@master"
+```bash tab="自动脚本"
+curl -fsSL https://powercontext.oceanbase.io/install.sh -o powercontext-install.sh
+bash powercontext-install.sh --no-hosts
+export PATH="$HOME/.local/bin:$PATH"
 ```
 
-该命令不会留下需要自行管理的仓库工作副本。Git 会沿用本机的凭据配置，包括 credential helper 和 SSH 设置。
-如需使用 SSH，请把 HTTPS URL 换成当前环境允许的 Git URL。`--force` 还会从所选 Git ref 当前指向的 commit
-刷新已安装工具；如果不加该参数，`uv` 可能只提示相同 requirement 已安装，而不会获取更新后的 `master`。
-
-安装指定分支或 tag 时，替换最后一个 `@` 后的 `master`。
-Agent 的安装、连接参数和验证步骤见[各自的集成文档](../integrations/index.md)，并使用与 Server 相同的 ref。
-
-## 运行本地 Server
-
-```bash
-powercontext server run
+```bash tab="已有 uv"
+uv tool install --python ">=3.11,<4" "powercontext[cli,server]==0.2.0"
+export PATH="$(uv tool dir --bin):$PATH"
 ```
 
-未设置环境变量时，Server 会：
+```bash tab="pip + venv"
+python3 -m venv .venv
+. .venv/bin/activate
+python -m pip install "powercontext[cli,server]==0.2.0"
+```
 
-- 监听 `127.0.0.1:8000`；
-- 在 `/mcp` 启用 Streamable HTTP MCP；
-- 创建默认 Scope，并在 `/` 启用 Dashboard；
-- 在操作系统的用户数据目录中创建持久化 SQLite 数据库；
-- 无需推理服务即可支持显式 Memory 操作。
+pip 路径需要已安装的 Python 3.11+ 和 venv 支持。uv 路径会自动获取缺少的 Python。
+自定义安装目录时，使用脚本输出的 `PATH` 命令。当前终端中的 `export` 不会修改其他终端；持久设置可使用 `uv tool update-shell`，然后重开终端。
 
-启动成功后，终端会输出 Dashboard 地址，例如 `http://127.0.0.1:8000/`。Dashboard 与 HTTP API、MCP 共用 Server
-的监听地址和端口。Dashboard 初始化失败时，Server 会记录包含直接原因的 warning，并继续提供其他接口；可通过
-`POWERCONTEXT_SERVER_DASHBOARD_ENABLED=false` 显式关闭 Dashboard。
+Windows 使用以下命令，已有 uv 时会直接复用：
 
-按 `Ctrl-C` 可正常关闭。再次运行该命令会打开同一个数据库。
+```powershell
+$env:Path = "$HOME\.local\bin;$env:Path"
+if (-not (Get-Command uv -ErrorAction SilentlyContinue)) {
+    Invoke-WebRequest https://astral.sh/uv/install.ps1 -OutFile uv-install.ps1
+    powershell -ExecutionPolicy Bypass -File .\uv-install.ps1
+}
+uv tool install --python ">=3.11,<4" "powercontext[cli,server]==0.2.0"
+$env:Path = "$(uv tool dir --bin);$env:Path"
+```
 
-这种最小启动方式不会启用依赖模型的抽取或向量搜索。如需生成并校验一份显式环境文件以启用这些能力，请继续阅读
-[启用提取与向量搜索](configure-models.md)。
+uv 的其他安装方式见[官方安装说明](https://docs.astral.sh/uv/getting-started/installation/)。如果 uv/Python 下载或 PyPI 访问失败，按[配置安装源](configure-package-index.md)区分故障位置。
+
+### 自动脚本的行为
+
+可以先查看下载的脚本，或阅读[脚本源码](https://github.com/oceanbase/powercontext/blob/master/website/public/install.sh)。
+脚本先检查 `PATH` 和 `~/.local/bin` 中的 uv，再通过 uv 查找本地兼容的 Python，包括 uv 已下载的解释器。找到后使用该解释器并禁止额外下载 Python；不会升级已有 uv。
+随后在用户级工具环境安装 PowerContext，检查 CLI 能否启动，并输出模型配置入口。
+它保留现有 uv 配置，不写入全局包索引配置、模型凭据或 Server 环境文件，也不注册个人服务。
+
+需要同时安装集成时显式选择宿主，例如：
+
+```bash
+bash powercontext-install.sh --version 0.2.0 --host codex --host claude-code
+```
+
+省略宿主参数会在交互终端中打开 `powercontext setup select`。自动化必须传入 `--host` 或 `--no-hosts`。
+下载后执行的形式保留了交互输入；通过管道执行时，请显式传入这些参数。
+宿主集成的安装与验证沿用现有 `setup` 命令。某个宿主失败会返回非零状态并报告结果，已安装的 Runtime 会保留。
+修复宿主前置条件后，用相同发布 tag 重试该宿主的 `powercontext setup`。
+
+## 选择版本
+
+正常使用选择正式版。Runtime 包与 Agent 集成使用相同的发布版本；下面以 Codex 展示两条命令的对应关系。
+先安装并配置 Codex，再执行其 setup 命令。
+
+```bash tab="正式版"
+uv tool install --python ">=3.11,<4" "powercontext[cli,server]==0.2.0"
+powercontext setup codex --ref powercontext-v0.2.0
+```
+
+```bash tab="预发布版"
+uv tool install --python ">=3.11,<4" "powercontext[cli,server]==<version>"
+powercontext setup codex --ref "powercontext-v<version>"
+```
+
+```bash tab="源码开发版"
+POWERCONTEXT_REF="$(git ls-remote https://github.com/oceanbase/powercontext.git refs/heads/master | cut -f1)"
+uv tool install --python ">=3.11,<4" --force "powercontext[cli,server] @ git+https://github.com/oceanbase/powercontext.git@${POWERCONTEXT_REF}"
+powercontext setup codex --ref "$POWERCONTEXT_REF"
+```
+
+预发布示例中的两个 `<version>` 都要替换成同一个已发布版本，例如 `0.3.0rc1`。
+该名称仅说明格式，不表示该版本已经发布。没有预发布版本时，使用正式版；不要退回 `master`。
+源码示例使用 Bash，将 `master` 解析成一个 commit 后用于两处安装。源码能力可能尚未发布，见[能力矩阵](../integrations/capabilities.md)。
+
+脚本也接受 `--version`，使用匹配的 `powercontext-v<version>` 集成 tag；它支持从 `0.1.0` 起采用该 tag 命名的发行版本。
+安装找不到的版本会报错，不会自动降级。镜像同步延迟的处理见[配置安装源](configure-package-index.md)。
+
+## 配置并启动 Server
+
+完成[模型配置](configure-models.md)后，使用同一环境文件校验和启动：
+
+```bash
+powercontext config validate --env-file .env
+powercontext server run --env-file .env
+```
+
+Server 默认监听 `127.0.0.1:8000`，在 `/` 提供 Dashboard，在 `/mcp` 提供 MCP，并在用户数据目录保存 SQLite 数据。
+按 `Ctrl-C` 停止 Server，使用同一数据目录重启会恢复已有数据。
+
+只需要显式 Memory 写入和全文搜索时，可以运行 `powercontext server run`，不配置模型。
+这种运行方式不会启用模型抽取或向量搜索。自动抽取需要生成模型和调度配置，向量搜索还需要 Embedding。
+
+在另一个终端检查服务：
+
+```bash
+powercontext doctor
+powercontext ready
+powercontext capabilities
+```
+
+`doctor` 检查包、Server 存活和就绪状态。Runtime 或数据库故障返回 `not_ready`；已配置推理服务的故障返回 `degraded`。
+状态解释见[诊断与恢复](../operate/troubleshoot.md)。长期运行、Docker、鉴权和远程访问见[部署 Server](../operate/deploy-server.md)。
 
 ## 使用嵌入式 seekDB
 
-在有兼容 `pylibseekdb` wheel 的 Linux 和 macOS 系统上可以使用嵌入式 seekDB；Windows 不支持该嵌入式
-后端。安装或替换工具时加入可选的 seekDB extra：
+在有兼容 `pylibseekdb` wheel 的 Linux/macOS 系统上，将 seekDB extra 加入当前安装：
 
 ```bash
-uv tool install --force "powercontext[cli,server,seekdb] @ git+https://github.com/oceanbase/powercontext.git@master"
+uv tool install --python ">=3.11,<4" "powercontext[cli,server,seekdb]==0.2.0"
 ```
 
-从 SQLite 切换时，需要从 Server 进程环境中删除 `POWERCONTEXT_SERVER_DATABASE_URL`；seekDB 不接受显式的
-SQLAlchemy 数据库 URL。然后选择 seekDB 后端并启动 Server：
+在 `.env` 中设置 `POWERCONTEXT_SERVER_DATABASE_KIND=seekdb`，并移除 `POWERCONTEXT_SERVER_DATABASE_URL`。
+seekDB 不接受显式 SQLAlchemy 数据库 URL，固定使用其内置 `test` 数据库。
+默认路径为用户数据目录下的 `seekdb`，或设置了 `POWERCONTEXT_HOME` 时的 `$POWERCONTEXT_HOME/seekdb`。
+自定义路径使用 `POWERCONTEXT_SERVER_DATABASE_PATH`。更换数据库后端不会自动迁移已有 SQLite 数据。
+
+## 更新安装
+
+先阅读目标版本的发行说明，然后将 Runtime 和使用中的集成一起更新到明确版本：
 
 ```bash
-unset POWERCONTEXT_SERVER_DATABASE_URL
-export POWERCONTEXT_SERVER_DATABASE_KIND=seekdb
-powercontext server run
+uv tool install --python ">=3.11,<4" "powercontext[cli,server]==<version>"
+powercontext setup codex --ref "powercontext-v<version>"
 ```
 
-CLI 不会自动搜索 `.env` 文件。请在 shell 中导出这些值、在启动 Server 的进程管理器或容器中配置，或者通过
-`powercontext server run --env-file <path>` 显式传入文件。
+替换两个 `<version>` 后执行，重启 Server，再开启新的 Agent 会话。
+固定版本的 uv tool 安装会保留版本约束，`uv tool upgrade powercontext` 不会自行跨过这个约束。
+脚本可用新的 `--version` 重复安装；指定的宿主仍需要一起更新。
+更新包不会自行删除数据，但数据库兼容性与迁移要求应以目标版本的发行说明为准。
 
-PowerContext 固定使用 seekDB 内置的 `test` 数据库。未设置 `POWERCONTEXT_SERVER_DATABASE_PATH` 时，实例保存在
-PowerContext 用户数据目录的 `seekdb` 子目录中；如果设置了 `POWERCONTEXT_HOME`，默认路径为
-`$POWERCONTEXT_HOME/seekdb`。只有需要其他位置时才设置 `POWERCONTEXT_SERVER_DATABASE_PATH`。
+## 为 Python 项目安装 SDK
 
-在另一个终端确认 Server 和数据库已经就绪：
+应用需要导入异步 Client SDK 时，将依赖加入应用自己的环境：
 
 ```bash
-powercontext doctor
-powercontext ready
-powercontext capabilities
+uv add "powercontext[client]==0.2.0"
 ```
 
-## 验证安装
-
-```bash
-powercontext doctor
-powercontext ready
-powercontext capabilities
-```
-
-`doctor` 检查已安装的包、Server 存活状态和 Server 就绪状态，不要求安装集成。Server 就绪检查涵盖数据库和
-每个已配置的推理服务。Runtime 或数据库故障返回 `not_ready`；推理服务故障返回 `degraded`，不会使数据库
-操作退出流量。`ready` 和 `capabilities` 用于查看运行中服务的就绪状态和已启用能力。
-Agent 诊断见[各自的集成文档](../integrations/index.md)；Server 状态解释和恢复步骤见[排查问题](../operate/troubleshoot.md)。
-
-需要长期运行进程、使用 Docker、启用鉴权或允许远程访问时，请继续阅读[部署 Server](../operate/deploy-server.md)。
-
-## 更新或替换安装
-
-使用指定 ref 替换现有工具：
-
-```bash
-uv tool install --force "powercontext[cli,server] @ git+https://github.com/oceanbase/powercontext.git@<ref>"
-```
-
-按[各自的集成文档](../integrations/index.md)更新已安装宿主，并使用同一个 ref。更新后重启 Server，再开启新的宿主会话。只要没有修改
-`POWERCONTEXT_HOME` 或数据库 URL，现有 SQLite 数据会继续保留。
-
-## 为 Python 项目安装角色
-
-如果应用需要导入异步 Client SDK，应把它加入该应用自己的环境：
-
-```bash
-uv add "powercontext[client] @ git+https://github.com/oceanbase/powercontext.git@master"
-```
-
-进程内 Python 组合使用 `builtin`，服务使用 `server`，Python SDK 使用 `client`，基于 Server 的命令行使用
-`cli`。只安装在 `uv tool` 隔离环境中的 extra 不能被另一个 Python 项目直接导入。
+`client` 用于 Python SDK，`builtin` 用于进程内组合，`server` 用于服务，`cli` 用于命令行。
+uv tool 隔离环境中的包不能直接被其他 Python 项目导入。更多用法见[接口说明](../develop/interfaces.md)。

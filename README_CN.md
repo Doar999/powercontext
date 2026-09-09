@@ -24,30 +24,42 @@ PowerContext 让上下文跟随工作，跨越不同的对话。你回来时，�
 
 ## 与你使用的 Agent 一起工作
 
-安装最新发布的 [PowerContext](https://pypi.org/project/powercontext/)：
+在 macOS/Linux 上使用 Bash 和 curl 安装。脚本复用已有的 uv 和 Python 3.11+，只下载缺少的组件：
 
 ```bash
-uv tool install "powercontext[cli,server]==0.2.0"
+curl -fsSL https://powercontext.oceanbase.io/install.sh -o powercontext-install.sh
+bash powercontext-install.sh --no-hosts
+export PATH="$HOME/.local/bin:$PATH"
+powercontext config init --output .env
 ```
 
-在单独的终端中启动本地 Server：
+脚本安装发布版 `0.2.0`。Windows（`experimental`）、已有 uv 或 pip 的安装方式见[安装指南](https://powercontext.oceanbase.io/zh/docs/get-started/install-and-run/)。使用脚本无需预装 Python 或 uv。自定义目录时，按脚本输出的命令设置 `PATH`。
+
+启动 Server 前，编辑 `.env`，加入生成模型与凭据。以下示例使用 OpenAI：
+
+```dotenv
+OPENAI_API_KEY=replace-with-your-api-key
+POWERCONTEXT_SERVER_INFERENCE_GENERATION_MODEL=openai-chat:gpt-4.1-mini
+POWERCONTEXT_SERVER_RUNTIME_SCHEDULE_SECONDS=60
+```
+
+Server 使用这个模型从采集的 Source 中抽取 Memory，不会自动使用 Agent 的模型配置或登录凭据。不要将 `.env` 提交到 Git。其他服务与向量搜索设置见[配置模型](https://powercontext.oceanbase.io/zh/docs/get-started/configure-models/)。
+
+校验文件，在单独的终端中启动 Server：
 
 ```bash
-powercontext server run
+powercontext config validate --env-file .env
+powercontext server run --env-file .env
 ```
 
-Server 默认将上下文保存到本地 SQLite 数据库。
-
-然后从同一个发布版本配置 Agent 集成。例如：
+Server 默认使用本地 SQLite 保存上下文。在另一个终端中接入同一发布版本的 Agent 集成，例如已安装的 Codex（需要 Git）：
 
 ```bash
 powercontext setup codex --ref powercontext-v0.2.0
+powercontext doctor codex
 ```
 
-PowerContext 工具与 Agent 集成应始终使用同一个 Git ref。`master` 安装、其他 Agent 和个人服务配置见
-[Quick Start](https://powercontext.oceanbase.io/zh/docs/get-started/quickstart/)和
-[安装指南](https://powercontext.oceanbase.io/zh/docs/get-started/install-and-run/)。
-需要 Python 3.11+。支持 macOS 和 Linux；Windows 支持为 `experimental`。
+按[快速开始](https://powercontext.oceanbase.io/zh/docs/get-started/quickstart/)验证模型就绪状态和跨会话记忆。下载失败时，参考[配置安装源](https://powercontext.oceanbase.io/zh/docs/get-started/configure-package-index/)。
 
 Codex 标为 `official`，其他宿主及 Python Agent 框架标为 `community`，Bub 标为 `evaluation`，仅用于评测。
 这些标签表示 PowerContext 集成的维护归属和用途，具体功能及可用状态见

@@ -24,30 +24,42 @@ You decide what will matter later and what needs to move with the task. PowerCon
 
 ## Works with your agents
 
-Install the latest released [PowerContext](https://pypi.org/project/powercontext/):
+Install PowerContext on macOS/Linux with Bash and curl. The script reuses existing uv and Python 3.11+ installations, downloading them only when needed:
 
 ```bash
-uv tool install "powercontext[cli,server]==0.2.0"
+curl -fsSL https://powercontext.oceanbase.io/install.sh -o powercontext-install.sh
+bash powercontext-install.sh --no-hosts
+export PATH="$HOME/.local/bin:$PATH"
+powercontext config init --output .env
 ```
 
-Start a local Server in its own terminal:
+The script installs release `0.2.0`. For Windows (`experimental`), an existing uv installation, or pip, see the [installation guide](https://powercontext.oceanbase.io/en/docs/get-started/install-and-run/). You do not need Python or uv installed beforehand for the script path. Use the script's printed `PATH` command if you use custom directories.
+
+Edit `.env` and add a generation model and its credentials before starting the Server. This example uses OpenAI:
+
+```dotenv
+OPENAI_API_KEY=replace-with-your-api-key
+POWERCONTEXT_SERVER_INFERENCE_GENERATION_MODEL=openai-chat:gpt-4.1-mini
+POWERCONTEXT_SERVER_RUNTIME_SCHEDULE_SECONDS=60
+```
+
+The Server uses this model to extract Memory from captured Sources. It does not automatically use your Agent's model settings or login credentials. Keep `.env` out of Git. For another provider or vector search, follow [Configure models](https://powercontext.oceanbase.io/en/docs/get-started/configure-models/).
+
+Validate the file and start the Server in its own terminal:
 
 ```bash
-powercontext server run
+powercontext config validate --env-file .env
+powercontext server run --env-file .env
 ```
 
-The Server stores context in a local SQLite database by default.
-
-Then set up an agent integration from the matching release. For example:
+The Server stores context in local SQLite by default. In another terminal, connect an installed Agent from the same release, for example Codex (requires Git):
 
 ```bash
 powercontext setup codex --ref powercontext-v0.2.0
+powercontext doctor codex
 ```
 
-Keep the PowerContext tool and agent integration on the same Git ref. For `master` installation, other agents,
-and personal services, follow the [Quick Start](https://powercontext.oceanbase.io/en/docs/get-started/quickstart/)
-and [installation guide](https://powercontext.oceanbase.io/en/docs/get-started/install-and-run/).
-Python 3.11+ is required. macOS and Linux are supported; Windows support is `experimental`.
+Follow [Quick start](https://powercontext.oceanbase.io/en/docs/get-started/quickstart/) to verify readiness and memory across sessions. See [Configure package indexes](https://powercontext.oceanbase.io/en/docs/get-started/configure-package-index/) if downloads fail.
 
 Codex is `official`; other hosts and Python Agent frameworks are `community`; Bub is `evaluation` only.
 These tags describe PowerContext integration maintenance and use. See the

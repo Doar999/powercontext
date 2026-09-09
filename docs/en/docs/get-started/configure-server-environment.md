@@ -5,7 +5,7 @@ description: Generate, inspect, validate, and run PowerContext from an explicit 
 
 # Configure a Server environment
 
-Use an explicit environment file when the Server needs inference, scheduling, storage, or deployment settings.
+Use this guide to generate, protect, and load an environment file. For your first generation or embedding service, start with [Configure models](configure-models.md).
 
 ## 1. Generate the file
 
@@ -13,16 +13,15 @@ Use an explicit environment file when the Server needs inference, scheduling, st
 powercontext config init --output .env
 ```
 
-The guided command writes a private file with mode `0600` and does not ask for models or provider credentials during
-deployment. The default file can start the Server directly; add the required model, credential, embedding profile ID,
-and dimension when you need automatic extraction, model generation, or vector retrieval.
+The command generates basic settings that can start a local Server without asking for models or provider credentials.
+For automatic extraction, add a generation model, credentials, and a schedule interval. Vector search also needs an embedding model, profile ID, and dimension.
+If `.env` already exists, edit the required entries rather than initializing it again.
 
 When `--force` would remove existing model, embedding, inference schedule, or provider credential settings, the
 command identifies that impact and requires an explicit confirmation that defaults to no. After confirmation, it
 creates a mode-`0600` backup before replacing the file.
 
-On macOS and Linux, the guided command writes a private file with mode `0600`. Enter provider credentials through your environment or
-secret manager, not in command-line arguments.
+On macOS and Linux, the command writes a private file with mode `0600`. Provide credentials through a private environment file or secret manager. Keep them out of command-line arguments and Git.
 
 Windows support is `experimental`. Before using the file for a personal service, restrict its ACL as described in
 [Deploy the Server](../operate/deploy-server.md).
@@ -44,7 +43,7 @@ powercontext server run --env-file .env
 ```
 
 Values in the file override same-named process values. Inherited `POWERCONTEXT_SERVER_*` values missing from the file
-are ignored, so validation and launch use the same Server settings.
+are ignored, so validation and launch use the same Server settings. Put the required Server settings in this file; exporting model variables in the shell and then passing a file without them will not enable those models.
 
 The Server starts with the configured capabilities. Use `powercontext ready` and `powercontext capabilities` to check
 its readiness and enabled features.
