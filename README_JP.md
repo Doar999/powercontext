@@ -24,16 +24,28 @@ PowerContext は、会話をまたいでもコンテキストを作業ととも�
 
 ## 利用中の Agent と接続する
 
-macOS/Linux では Bash と curl でインストールします。スクリプトは既存の uv と Python 3.11+ を再利用し、不足している場合のみダウンロードします：
+macOS/Linux では、インストーラーが既存の uv と Python 3.11+ を再利用し、不足しているものだけをダウンロードします：
 
 ```bash
 curl -fsSL https://powercontext.oceanbase.io/install.sh -o powercontext-install.sh
 bash powercontext-install.sh --no-hosts
 export PATH="$HOME/.local/bin:$PATH"
-powercontext config init --output .env
 ```
 
-スクリプトはリリース `0.2.0` をインストールします。Python や uv の事前インストールは不要です。Windows（`experimental`）、既存の uv、pip を使用する場合は[インストールガイド](https://powercontext.oceanbase.io/en/docs/get-started/install-and-run/)を参照してください。カスタムディレクトリを使う場合は、スクリプトが表示するコマンドで `PATH` を設定してください。
+uv がすでにインストールされている場合は、macOS、Linux、Windows で次のコマンドを使用できます：
+
+```console
+uv tool install --python ">=3.11,<4" "powercontext[cli,server]==0.2.0"
+uv tool update-shell
+```
+
+どちらもリリース `0.2.0` をインストールします。スクリプト方式では Python や uv の事前インストールは不要です。`uv tool update-shell` の実行後はターミナルを開き直してください。スクリプトでカスタムディレクトリを使う場合は、表示されたコマンドで `PATH` を設定します。Windows インストーラー（`experimental`）と pip については[インストールガイド](https://powercontext.oceanbase.io/en/docs/get-started/install-and-run/)を参照してください。
+
+Server の環境ファイルを作成します：
+
+```console
+powercontext config init --output .env
+```
 
 Server を起動する前に `.env` を編集し、生成モデルと認証情報を追加します。以下は OpenAI の例です：
 

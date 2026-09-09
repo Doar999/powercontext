@@ -10,9 +10,12 @@ PowerContext Server 使用生成模型处理 Source，使用 Embedding 模型建
 
 | 配置 | 可以使用的能力 |
 | --- | --- |
-| 未配置模型 | 显式 Memory 写入、全文搜索、Dashboard 和 MCP |
+| 未配置模型 | 显式 Memory 写入、全文搜索和 MCP |
 | 生成模型与调度间隔 | 自动从 Source 抽取 Memory |
 | Embedding 模型、profile ID 与 dimension | 向量搜索与混合搜索 |
+
+Dashboard 不依赖模型，但默认关闭；启用时还需要配置访问控制。
+Server 首次启动时会创建一个使用不透明 ID 的默认 Scope。Integration 可以使用该 Scope，也可以使用其他已有 Scope。
 
 ## 配置生成模型
 
@@ -91,7 +94,7 @@ powercontext server run --env-file .env
 ```
 
 `config show` 隐藏已识别的凭据。`config validate` 检查配置和 Runtime 组装，不能代替真实模型调用。
-CLI 不会自动搜索 `.env`；校验和启动都要显式传入同一个文件。加载优先级见[配置 Server 环境](configure-server-environment.md)。
+`server run` 会发现当前目录的 `.env`；显式传入 `--env-file` 可以确保校验和启动使用同一个文件。加载优先级和 `--no-env-file` 的用法见[配置 Server 环境](configure-server-environment.md)。
 
 在另一个终端运行：
 
@@ -157,4 +160,4 @@ powercontext stats --scope-id "$SCOPE_ID"
 | 两个模型的请求去了同一个服务 | 使用各自的 generation/embedding base URL，核对 Key 和 header |
 | 重启后数据不见了 | 检查是否仍使用同一数据库 URL 或 `POWERCONTEXT_HOME` |
 
-模型配置完成后，按[集成指南](../integrations/index.md)接入 Agent。长期运行见[部署 Server](../operate/deploy-server.md)，全部变量见[配置参考](../operate/configuration.md)。
+使用同一个数据库重启 Server 后，默认 Scope 及其不透明 ID 保持不变。模型配置完成后，按[集成指南](../integrations/index.md)接入 Agent。长期运行见[部署 Server](../operate/deploy-server.md)，全部变量见[配置参考](../operate/configuration.md)，保存 Artifact 和 Memory entry 的整理方式见[自定义标签](../workflows/manage-artifact-tags.md)。

@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import os
+import shlex
 from pathlib import Path
 from unittest.mock import patch
 
@@ -163,6 +164,69 @@ def test_validate_accepts_minimal_server_environment_without_inference_models(tm
         assert settings.database.kind == "seekdb"
         assert settings.http.host == "127.0.0.1"
         assert settings.http.port == 8888
+
+
+@pytest.mark.parametrize("token", ["literal-${PR1525_ABSENT}", "token'with-apostrophe"])
+def test_server_settings_context_preserves_strict_env_file_values(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    token: str,
+) -> None:
+    environment = tmp_path / "server.env"
+    environment.write_text(
+        "\n".join((
+            "POWERCONTEXT_SERVER_ACCESS_MODE=enforced",
+            f"POWERCONTEXT_SERVER_AUTH_TOKEN={shlex.quote(token)}",
+            "",
+        )),
+        encoding="utf-8",
+    )
+    monkeypatch.delenv("POWERCONTEXT_SERVER_ACCESS_MODE", raising=False)
+    monkeypatch.delenv("POWERCONTEXT_SERVER_AUTH_TOKEN", raising=False)
+
+    with server_settings_context(env_file=environment, process_environment_overrides=True) as settings:
+        assert settings.auth.token is not None
+        assert settings.auth.token.get_secret_value() == token
+
+
+def test_server_settings_context_preserves_process_priority_for_nested_settings(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    environment = tmp_path / "server.env"
+    environment.write_text("POWERCONTEXT_SERVER_HTTP_PORT=8999\n", encoding="utf-8")
+    monkeypatch.setenv("POWERCONTEXT_SERVER_HTTP", '{"port":8123}')
+    monkeypatch.delenv("POWERCONTEXT_SERVER_HTTP_PORT", raising=False)
+
+    with server_settings_context(env_file=environment, process_environment_overrides=True) as settings:
+        assert settings.http.port == 8123
+
+
+@pytest.mark.skipif(os.name == "nt", reason="Windows environment names are case-insensitive")
+def test_server_settings_context_preserves_provider_environment_case(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    environment = tmp_path / "server.env"
+    environment.write_text("OPENAI_API_KEY=file-secret\n", encoding="utf-8")
+    monkeypatch.setenv("openai_api_key", "process-lowercase-secret")
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+
+    with server_settings_context(env_file=environment, process_environment_overrides=True):
+        assert os.environ["OPENAI_API_KEY"] == "file-secret"
+        assert os.environ["openai_api_key"] == "process-lowercase-secret"  # noqa: SIM112
+
+
+def test_server_settings_context_does_not_implicitly_discover_dotenv(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    (tmp_path / ".env").write_text("POWERCONTEXT_SERVER_HTTP_PORT=8889\n", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("POWERCONTEXT_SERVER_HTTP_PORT", raising=False)
+
+    with server_settings_context() as settings:
+        assert settings.http.port == 8000
 
 
 @pytest.mark.parametrize(
@@ -398,27 +462,6 @@ def test_validate_reports_invalid_numeric_values_without_a_traceback(tmp_path: P
     assert result.exit_code == 2
     assert "POWERCONTEXT_SERVER_RUNTIME_SCHEDULE_SECONDS must be an integer" in result.output
     assert "Traceback" not in result.output
-
-
-def test_validate_accepts_multiline_quoted_dashboard_scopes(tmp_path: Path) -> None:
-    environment = tmp_path / ".env"
-    multiline = """POWERCONTEXT_SERVER_DASHBOARD_SCOPES='[
-  {
-    "scope_id": "project:quickstart",
-    "display_name": "Quick Start"
-  }
-]'"""
-    generated = config_cli.render_managed_block(_configuration())
-    content = "\n".join(
-        line for line in generated.splitlines() if not line.startswith("POWERCONTEXT_SERVER_DASHBOARD_SCOPES=")
-    )
-    content = f"{content}\n{multiline}\n"
-    environment.write_text(content, encoding="utf-8")
-
-    result = CliRunner().invoke(config_cli.app, ["validate", "--env-file", str(environment)])
-
-    assert result.exit_code == 0
-    assert "Configuration is valid" in result.output
 
 
 def test_show_redacts_standard_credential_container_variables(tmp_path: Path) -> None:

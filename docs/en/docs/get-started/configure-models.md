@@ -10,9 +10,12 @@ These settings are independent of the Agent host's model and login credentials. 
 
 | Configuration | Available behavior |
 | --- | --- |
-| No models | Explicit Memory writes, full-text search, Dashboard, and MCP |
+| No models | Explicit Memory writes, full-text search, and MCP |
 | Generation model and schedule interval | Automatic Memory extraction from Sources |
 | Embedding model, profile ID, and dimension | Vector and hybrid search |
+
+The optional Dashboard does not require a model, but it is disabled by default and requires access control when enabled.
+The Server creates an opaque default Scope on first startup. Integrations may use that Scope or another existing Scope.
 
 ## Configure generation
 
@@ -91,7 +94,7 @@ powercontext server run --env-file .env
 ```
 
 `config show` redacts recognized credentials. `config validate` checks configuration and Runtime assembly; it does not replace a real model call.
-The CLI does not search for `.env` automatically. Pass the same file to validation and startup. See [Configure the Server environment](configure-server-environment.md) for loading precedence.
+`server run` discovers `.env` in the current directory, but passing `--env-file` makes it explicit that validation and startup use the same file. See [Configure the Server environment](configure-server-environment.md) for loading precedence and `--no-env-file`.
 
 In another terminal, run:
 
@@ -157,4 +160,4 @@ Without embeddings, skip this step and continue using full-text search.
 | Both models call the same service | Use separate generation/embedding base URLs and check keys and headers |
 | Data is missing after restart | Check that the database URL or `POWERCONTEXT_HOME` has not changed |
 
-After configuring models, [connect an Agent](../integrations/index.md). See [Deploy the Server](../operate/deploy-server.md) for persistent services and the [configuration reference](../operate/configuration.md) for all variables.
+The default Scope and its opaque ID remain stable when the Server restarts with the same database. After configuring models, [connect an Agent](../integrations/index.md). See [Deploy the Server](../operate/deploy-server.md) for persistent services, the [configuration reference](../operate/configuration.md) for all variables, and [Custom tags](../workflows/manage-artifact-tags.md) to organize saved Artifacts and Memory entries.

@@ -21,6 +21,7 @@ import hashlib
 import json
 import os
 import re
+import shlex
 import shutil
 import subprocess
 import sys
@@ -204,4 +205,24 @@ def test_windows_documented_uv_installation(tmp_path: Path) -> None:
     run_command(["pwsh", "-NoProfile", "-File", str(script)], tmp_path, environment, "install")
     assert not (Path(environment["HOME"]) / ".local/bin/uv.exe").exists()
     assert not list((tmp_path / "python").glob("cpython-*"))
+    verify_installation(tmp_path, environment)
+
+
+def test_documented_existing_uv_installation(tmp_path: Path) -> None:
+    environment = install_environment(tmp_path)
+    environment["UV_PYTHON_DOWNLOADS"] = "never"
+    documentation = (ROOT / "docs/en/docs/get-started/quickstart.md").read_text(encoding="utf-8")
+    match = re.search(r'```console tab="Existing uv"[^\n]*\n(.*?)```', documentation, re.DOTALL)
+    assert match is not None
+    install_command = next(line for line in match[1].splitlines() if line.startswith("uv tool install "))
+    install_command = re.sub(
+        r'powercontext\[cli,server\]==[^"\s]+',
+        f"powercontext[cli,server]=={wheel_version()}",
+        install_command,
+    )
+    command = shlex.split(install_command)
+    uv = shutil.which("uv")
+    assert uv is not None
+    command[0] = uv
+    run_command(command, tmp_path, environment, "install-existing-uv")
     verify_installation(tmp_path, environment)

@@ -10,8 +10,8 @@ You need Codex, Git, and an API key for a generation model service. The PowerCon
 
 ## 1. Install PowerContext
 
-On macOS/Linux, use Bash and curl. On Windows, use PowerShell; support is `experimental`.
-These steps reuse existing uv and Python 3.11+ installations, downloading them only when needed. Neither needs to be installed beforehand.
+If uv is already installed, use it directly on macOS, Linux, or Windows. Otherwise, use the installer for your operating system. Windows support is `experimental`.
+The operating-system installers reuse compatible uv and Python 3.11+ installations and download only what is missing.
 
 ```bash tab="macOS / Linux" tab-group="install-platform"
 curl -fsSL https://powercontext.oceanbase.io/install.sh -o powercontext-install.sh
@@ -29,8 +29,13 @@ uv tool install --python ">=3.11,<4" "powercontext[cli,server]==0.2.0"
 $env:Path = "$(uv tool dir --bin);$env:Path"
 ```
 
-The script installs `0.2.0` by default. If it reports a different executable directory, follow its output to update the current terminal's `PATH`.
-For an existing uv installation, pip, other versions, or download failures, see [Install and run](install-and-run.md) and [Configure package indexes](configure-package-index.md).
+```console tab="Existing uv" tab-group="install-platform"
+uv tool install --python ">=3.11,<4" "powercontext[cli,server]==0.2.0"
+uv tool update-shell
+```
+
+All three paths install release `0.2.0`. Reopen the terminal after `uv tool update-shell`; for the script paths, follow any `PATH` command printed by the installer.
+For pip, other versions, or download failures, see [Install and run](install-and-run.md) and [Configure package indexes](configure-package-index.md).
 
 ## 2. Configure a generation model
 
@@ -59,8 +64,8 @@ powercontext config validate --env-file .env
 powercontext server run --env-file .env
 ```
 
-Keep this terminal open. The Server listens at `http://127.0.0.1:8000`, persists data in local SQLite, and serves the Dashboard at `/` and MCP at `/mcp`.
-The CLI does not load `.env` automatically; pass the same file when restarting.
+Keep this terminal open. The Server listens at `http://127.0.0.1:8000`, persists data in local SQLite, and serves MCP at `/mcp`.
+The personal Dashboard is disabled by default; see [Install and run](install-and-run.md) to enable it. `server run` discovers `.env` in the current directory, while the explicit option above guarantees that it loads the file you just validated.
 
 Open another terminal, ensure PowerContext is on `PATH`, and check:
 

@@ -24,16 +24,28 @@ PowerContext 让上下文跟随工作，跨越不同的对话。你回来时，�
 
 ## 与你使用的 Agent 一起工作
 
-在 macOS/Linux 上使用 Bash 和 curl 安装。脚本复用已有的 uv 和 Python 3.11+，只下载缺少的组件：
+在 macOS/Linux 上，安装脚本会复用已有的 uv 和 Python 3.11+，只下载缺少的组件：
 
 ```bash
 curl -fsSL https://powercontext.oceanbase.io/install.sh -o powercontext-install.sh
 bash powercontext-install.sh --no-hosts
 export PATH="$HOME/.local/bin:$PATH"
-powercontext config init --output .env
 ```
 
-脚本安装发布版 `0.2.0`。Windows（`experimental`）、已有 uv 或 pip 的安装方式见[安装指南](https://powercontext.oceanbase.io/zh/docs/get-started/install-and-run/)。使用脚本无需预装 Python 或 uv。自定义目录时，按脚本输出的命令设置 `PATH`。
+如果已经安装 uv，可在 macOS、Linux 或 Windows 上直接执行：
+
+```console
+uv tool install --python ">=3.11,<4" "powercontext[cli,server]==0.2.0"
+uv tool update-shell
+```
+
+两种方式都安装发布版 `0.2.0`。脚本方式无需预装 Python 或 uv。运行 `uv tool update-shell` 后重开终端；脚本使用自定义目录时，按其输出设置 `PATH`。Windows 安装脚本（`experimental`）和 pip 方式见[安装指南](https://powercontext.oceanbase.io/zh/docs/get-started/install-and-run/)。
+
+生成 Server 环境文件：
+
+```console
+powercontext config init --output .env
+```
 
 启动 Server 前，编辑 `.env`，加入生成模型与凭据。以下示例使用 OpenAI：
 

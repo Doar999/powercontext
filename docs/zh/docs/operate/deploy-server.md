@@ -76,15 +76,16 @@ powercontext server run
 运行进程必须能创建和更新该目录。默认 SQLite 数据库和 scheduler 状态都保存在这里。服务管理器每次重启进程时都应
 提供相同的环境变量。
 
-PowerContext 不会自动搜索 `.env` 文件。可以导出变量、由服务管理器或容器平台提供，或者显式传入一个文件：
+当前目录存在 `.env` 时，`server run` 会自动加载。托管部署应导出变量、由服务管理器或容器平台提供，或者显式传入文件，
+避免启动行为依赖工作目录：
 
 ```bash
 powercontext config validate --env-file /etc/powercontext/powercontext.env
 powercontext server run --env-file /etc/powercontext/powercontext.env
 ```
 
-文件可能包含 Provider 凭据或 Bearer token，因此只能允许 Server 运维者读取。文件中的值会覆盖进程中的同名值；
-文件中不存在的旧 `POWERCONTEXT_SERVER_*` 进程变量会被忽略。`config init` 生成的是不含模型的基础配置；需要启用完整
+文件可能包含 Provider 凭据或 Bearer token，因此只能允许 Server 运维者读取。对于 `server run`，进程环境变量会覆盖
+文件中的同名值。`config init` 生成的是不含模型的基础配置；需要启用完整
 推理能力时，请阅读[启用提取与向量搜索](../get-started/configure-models.md)并补充模型配置。
 
 无论使用前台进程、Docker 还是个人服务安装，只要 generation 或 embedding model 未配置，启动或安装输出都会提示
@@ -141,9 +142,15 @@ docker run --rm \
 
 此后客户端需要发送 `Authorization: Bearer <token>`。liveness 和 readiness endpoint 保持公开，便于编排系统探测；
 API、MCP、metrics 和 `/openapi.json` 需要鉴权。`/docs` 页面外壳保持公开，但在交互式参考页中发起的请求仍需鉴权。
-Server 的网页外壳和静态资源仍保持公开，以便显示登录表单；未提供 token 时不会返回受保护数据。打开 Dashboard、
-Skills、Review 或 Handoff Report 页面后，在表单中输入同一个 token。浏览器会把它保存在当前标签页的 session storage
-中，而不是加入 URL。
+
+个人或演示部署可额外设置 `POWERCONTEXT_SERVER_DASHBOARD_ENABLED=true`，启用同一端口上的
+`/dashboard/home`。它要求上述静态 Bearer 配置；没有 token 时启动会明确失败。
+浏览器登录使用 Server token，不是模型 API key。凭据存入仅限 `/dashboard` 的 HttpOnly、SameSite=Strict
+Cookie，最长八小时；HTTPS 下设置 Secure。反向代理应正确传递外部 scheme 和 host，以通过登录同源检查。
+
+静态 token 的所有持有者具有同一个管理员身份。Dashboard 不支持多成员 RBAC，也不提供账号、SSO、邀请和授权管理。
+注入 Authentication Provider 或 AccessControlService 的部署必须关闭 Dashboard；不兼容的启用配置会在启动时被拒绝。
+关闭 Dashboard 不影响团队的 API 和 MCP。个人启用步骤见[安装和运行](../get-started/install-and-run.md)。
 
 ## 检查部署
 

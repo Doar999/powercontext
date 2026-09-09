@@ -10,8 +10,8 @@ description: 安装 PowerContext、配置生成模型、接入 Codex，并在新
 
 ## 1. 安装 PowerContext
 
-macOS/Linux 需要 Bash 和 curl；Windows 使用 PowerShell，支持状态为 `experimental`。
-下面的步骤复用已有的 uv 和 Python 3.11+，只下载缺少的组件，无需预装。
+已经安装 uv 时，可在 macOS、Linux 或 Windows 上直接使用；否则运行对应操作系统的安装脚本。Windows 支持状态为 `experimental`。
+系统安装脚本会复用兼容的 uv 和 Python 3.11+，只下载缺少的组件。
 
 ```bash tab="macOS / Linux" tab-group="install-platform"
 curl -fsSL https://powercontext.oceanbase.io/install.sh -o powercontext-install.sh
@@ -29,8 +29,13 @@ uv tool install --python ">=3.11,<4" "powercontext[cli,server]==0.2.0"
 $env:Path = "$(uv tool dir --bin);$env:Path"
 ```
 
-脚本默认安装 `0.2.0`。如果脚本报告了其他可执行目录，按它输出的命令更新当前终端的 `PATH`。
-已有 uv、使用 pip、安装其他版本或下载失败时，见[安装和运行](install-and-run.md)与[配置安装源](configure-package-index.md)。
+```console tab="已有 uv" tab-group="install-platform"
+uv tool install --python ">=3.11,<4" "powercontext[cli,server]==0.2.0"
+uv tool update-shell
+```
+
+三种方式都安装 `0.2.0`。运行 `uv tool update-shell` 后重开终端；使用脚本时，按脚本输出的命令更新 `PATH`。
+使用 pip、安装其他版本或下载失败时，见[安装和运行](install-and-run.md)与[配置安装源](configure-package-index.md)。
 
 ## 2. 配置生成模型
 
@@ -59,8 +64,8 @@ powercontext config validate --env-file .env
 powercontext server run --env-file .env
 ```
 
-保持这个终端运行。Server 默认监听 `http://127.0.0.1:8000`，使用本地 SQLite 持久化数据，在 `/` 提供 Dashboard，在 `/mcp` 提供 MCP。
-CLI 不会自动加载 `.env`；重启时继续传入同一个文件。
+保持这个终端运行。Server 默认监听 `http://127.0.0.1:8000`，使用本地 SQLite 持久化数据，并在 `/mcp` 提供 MCP。
+个人 Dashboard 默认关闭，启用方式见[安装和运行](install-and-run.md)。`server run` 会发现当前目录的 `.env`；上面的显式参数可确保启动时加载刚刚校验的文件。
 
 另开终端，确认 PowerContext 在 `PATH` 中，然后检查：
 

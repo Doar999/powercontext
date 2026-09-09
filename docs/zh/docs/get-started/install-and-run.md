@@ -11,8 +11,8 @@ description: 安装 PowerContext、选择发布版本和安装方式，并管理
 
 | 平台 | 状态 | 安装入口 |
 | --- | --- | --- |
-| macOS、Linux | 支持 | Bash 脚本或 uv |
-| Windows | `experimental` | PowerShell 中安装 uv，再安装 PowerContext |
+| macOS、Linux | 支持 | Bash 安装脚本或 uv |
+| Windows | `experimental` | PowerShell 安装脚本或 uv |
 
 使用脚本只需 Bash、curl 或 wget，以及能访问安装站点和包下载服务的网络。脚本复用已有的 uv 和 Python 3.11+；只有缺少 uv 时才安装 uv，找不到兼容的本地 Python 时才下载 Python 3.12。
 你不需要预先安装 Python，也不需要修改系统 Python。
@@ -22,7 +22,7 @@ Windows 的宿主与数据库支持取决于各自的平台要求，嵌入式 se
 
 ## 安装应用
 
-macOS/Linux 可选择自动脚本、已有 uv，或已有 Python 的虚拟环境。下面三种方式都安装 CLI、Server 和默认 SQLite 后端。
+可以运行对应操作系统的安装脚本，在任意平台使用已有 uv，或用已有 Python 创建虚拟环境。每种方式都会安装 CLI、Server 和默认 SQLite 后端。
 
 ```bash tab="自动脚本"
 curl -fsSL https://powercontext.oceanbase.io/install.sh -o powercontext-install.sh
@@ -30,9 +30,9 @@ bash powercontext-install.sh --no-hosts
 export PATH="$HOME/.local/bin:$PATH"
 ```
 
-```bash tab="已有 uv"
+```console tab="已有 uv（全平台）"
 uv tool install --python ">=3.11,<4" "powercontext[cli,server]==0.2.0"
-export PATH="$(uv tool dir --bin):$PATH"
+uv tool update-shell
 ```
 
 ```bash tab="pip + venv"
@@ -42,7 +42,7 @@ python -m pip install "powercontext[cli,server]==0.2.0"
 ```
 
 pip 路径需要已安装的 Python 3.11+ 和 venv 支持。uv 路径会自动获取缺少的 Python。
-自定义安装目录时，使用脚本输出的 `PATH` 命令。当前终端中的 `export` 不会修改其他终端；持久设置可使用 `uv tool update-shell`，然后重开终端。
+运行 `uv tool update-shell` 后需要重开终端。使用 Bash 脚本和自定义目录时，按脚本输出的命令设置 `PATH`。
 
 Windows 使用以下命令，已有 uv 时会直接复用：
 
@@ -113,7 +113,7 @@ powercontext config validate --env-file .env
 powercontext server run --env-file .env
 ```
 
-Server 默认监听 `127.0.0.1:8000`，在 `/` 提供 Dashboard，在 `/mcp` 提供 MCP，并在用户数据目录保存 SQLite 数据。
+Server 默认监听 `127.0.0.1:8000`，在 `/mcp` 提供 MCP，创建默认 Scope，并在用户数据目录保存 SQLite 数据。
 按 `Ctrl-C` 停止 Server，使用同一数据目录重启会恢复已有数据。
 
 只需要显式 Memory 写入和全文搜索时，可以运行 `powercontext server run`，不配置模型。
@@ -129,6 +129,34 @@ powercontext capabilities
 
 `doctor` 检查包、Server 存活和就绪状态。Runtime 或数据库故障返回 `not_ready`；已配置推理服务的故障返回 `degraded`。
 状态解释见[诊断与恢复](../operate/troubleshoot.md)。长期运行、Docker、鉴权和远程访问见[部署 Server](../operate/deploy-server.md)。
+
+### 启用 Dashboard
+
+Dashboard 是个人使用和演示的可选内容查看器，默认关闭。它不需要单独安装前端或配置模型。
+需要使用时，在受保护的环境文件中设置以下值，并将 token 示例替换为自己的长随机凭据：
+
+```dotenv
+POWERCONTEXT_SERVER_DASHBOARD_ENABLED=true
+POWERCONTEXT_SERVER_ACCESS_MODE=enforced
+POWERCONTEXT_SERVER_AUTH_TOKEN=replace-with-your-random-token
+```
+
+```bash
+chmod 600 /path/to/powercontext.env
+powercontext config validate --env-file /path/to/powercontext.env
+powercontext server run --env-file /path/to/powercontext.env
+```
+
+打开 `http://127.0.0.1:8000/dashboard/home`，输入同一个 token。更改端口后使用实际端口。
+该 token 同时用于 Server API 和 MCP，已连接的 Agent 也需配置它。`server run` 会发现当前目录的 `.env`；
+使用 `--env-file <path>` 可选择其他文件，使用 `--no-env-file` 可禁用文件加载。
+
+首次登录选择 Server 默认 Scope，未保存内容时显示空状态。通过 Agent 或公开 API 保存一条 Memory，
+再刷新同一 Scope 的记忆页即可查看。经验、技能、交接和用量也来自实际保存记录；页面不采集会话、不运行生成，
+也不批准候选。Dashboard 和 Agent 必须连接同一个 Server、使用同一个 Scope。
+
+所有 token 持有者使用同一个身份。多成员 RBAC 部署应保持 Dashboard 关闭，通过 API、MCP 或宿主集成访问内容。
+网络与凭据配置见[部署 Server](../operate/deploy-server.md)。
 
 ## 使用嵌入式 seekDB
 

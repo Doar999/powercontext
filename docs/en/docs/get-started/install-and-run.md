@@ -11,8 +11,8 @@ For your first Agent connection, follow [Quick start](quickstart.md) through ins
 
 | Platform | Status | Installation entry point |
 | --- | --- | --- |
-| macOS, Linux | Supported | Bash installer or uv |
-| Windows | `experimental` | Install uv in PowerShell, then install PowerContext |
+| macOS, Linux | Supported | Bash installer, or uv on any platform |
+| Windows | `experimental` | PowerShell installer, or uv on any platform |
 
 The script needs Bash, curl or wget, and access to the installation and package download services. It reuses existing uv and Python 3.11+ installations. It installs uv only when missing and downloads Python 3.12 only when no compatible local interpreter is found.
 You do not need Python installed beforehand or have to change system Python.
@@ -22,7 +22,7 @@ On Windows, individual hosts and databases have their own platform requirements.
 
 ## Install the application
 
-On macOS/Linux, choose the script, an existing uv installation, or a virtual environment created with an existing Python installation. All three methods install the CLI, Server, and default SQLite backend.
+Choose the installer for your operating system, use an existing uv installation on any platform, or create a virtual environment from an existing Python installation. Each method installs the CLI, Server, and default SQLite backend.
 
 ```bash tab="Install script"
 curl -fsSL https://powercontext.oceanbase.io/install.sh -o powercontext-install.sh
@@ -30,9 +30,9 @@ bash powercontext-install.sh --no-hosts
 export PATH="$HOME/.local/bin:$PATH"
 ```
 
-```bash tab="Existing uv"
+```console tab="Existing uv (all platforms)"
 uv tool install --python ">=3.11,<4" "powercontext[cli,server]==0.2.0"
-export PATH="$(uv tool dir --bin):$PATH"
+uv tool update-shell
 ```
 
 ```bash tab="pip + venv"
@@ -42,7 +42,7 @@ python -m pip install "powercontext[cli,server]==0.2.0"
 ```
 
 The pip method requires Python 3.11+ with venv support. uv obtains Python if it is missing.
-For custom directories, use the `PATH` command printed by the script. `export` affects only the current terminal. To persist the executable path, run `uv tool update-shell` and reopen your terminal.
+Reopen the terminal after `uv tool update-shell`. For custom directories, use the `PATH` command printed by the Bash installer.
 
 On Windows, use these commands. They reuse uv when it is already available:
 
@@ -114,7 +114,7 @@ powercontext config validate --env-file .env
 powercontext server run --env-file .env
 ```
 
-The Server listens on `127.0.0.1:8000`, serves the Dashboard at `/` and MCP at `/mcp`, and stores SQLite data in the user data directory.
+The Server listens on `127.0.0.1:8000`, serves MCP at `/mcp`, creates a default Scope, and stores SQLite data in the user data directory.
 Press `Ctrl-C` to stop it. Restarting with the same data directory restores existing data.
 
 If you only need explicit Memory writes and full-text search, `powercontext server run` works without models.
@@ -130,6 +130,36 @@ powercontext capabilities
 
 `doctor` checks packages, Server liveness, and readiness. Runtime or database failures return `not_ready`; a configured inference service failure returns `degraded`.
 See [Troubleshoot](../operate/troubleshoot.md) for status details. For persistent services, Docker, authentication, or remote access, see [Deploy the Server](../operate/deploy-server.md).
+
+### Enable the Dashboard
+
+The Dashboard is an optional content viewer for personal use and demonstrations. It is disabled by default and needs
+no separate frontend installation or model configuration. To enable it, put these settings in a protected environment
+file and replace the token example with your own long random credential:
+
+```dotenv
+POWERCONTEXT_SERVER_DASHBOARD_ENABLED=true
+POWERCONTEXT_SERVER_ACCESS_MODE=enforced
+POWERCONTEXT_SERVER_AUTH_TOKEN=replace-with-your-random-token
+```
+
+```bash
+chmod 600 /path/to/powercontext.env
+powercontext config validate --env-file /path/to/powercontext.env
+powercontext server run --env-file /path/to/powercontext.env
+```
+
+Open `http://127.0.0.1:8000/dashboard/home` and enter the same token. Use the actual port if you change it.
+The token also protects the Server API and MCP, so connected Agents need it too. `server run` discovers `.env` in the
+current directory; use `--env-file <path>` for another file or `--no-env-file` to disable file loading.
+
+The first sign-in selects the Server default Scope. Pages are empty until content is saved. Save a Memory through an
+Agent or public API, then refresh Memories in the same Scope. Experiences, skills, handoffs, and usage also come from
+saved records. The Dashboard does not capture sessions, run generation, or approve candidates. The Dashboard and Agent
+must use the same Server and Scope.
+
+All token holders use one identity. Multi-user RBAC deployments should leave the Dashboard disabled and use the API,
+MCP, or host integrations. See [Deploy the Server](../operate/deploy-server.md) for network and credential configuration.
 
 ## Use embedded seekDB
 

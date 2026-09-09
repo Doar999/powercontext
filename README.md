@@ -24,16 +24,28 @@ You decide what will matter later and what needs to move with the task. PowerCon
 
 ## Works with your agents
 
-Install PowerContext on macOS/Linux with Bash and curl. The script reuses existing uv and Python 3.11+ installations, downloading them only when needed:
+On macOS/Linux, the installer reuses existing uv and Python 3.11+ installations and downloads only what is missing:
 
 ```bash
 curl -fsSL https://powercontext.oceanbase.io/install.sh -o powercontext-install.sh
 bash powercontext-install.sh --no-hosts
 export PATH="$HOME/.local/bin:$PATH"
-powercontext config init --output .env
 ```
 
-The script installs release `0.2.0`. For Windows (`experimental`), an existing uv installation, or pip, see the [installation guide](https://powercontext.oceanbase.io/en/docs/get-started/install-and-run/). You do not need Python or uv installed beforehand for the script path. Use the script's printed `PATH` command if you use custom directories.
+If uv is already installed, the following works on macOS, Linux, and Windows:
+
+```console
+uv tool install --python ">=3.11,<4" "powercontext[cli,server]==0.2.0"
+uv tool update-shell
+```
+
+Both methods install release `0.2.0`. The script path does not require Python or uv beforehand. Reopen the terminal after `uv tool update-shell`, or follow the script's printed `PATH` command. For the Windows installer (`experimental`) and pip, see the [installation guide](https://powercontext.oceanbase.io/en/docs/get-started/install-and-run/).
+
+Create the Server environment file:
+
+```console
+powercontext config init --output .env
+```
 
 Edit `.env` and add a generation model and its credentials before starting the Server. This example uses OpenAI:
 
