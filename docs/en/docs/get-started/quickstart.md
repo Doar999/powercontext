@@ -13,13 +13,18 @@ You need Codex, Git, and an API key for a generation model service. The PowerCon
 If uv is already installed, use it directly on macOS, Linux, or Windows. Otherwise, use the installer for your operating system. Windows support is `experimental`.
 The operating-system installers reuse compatible uv and Python 3.11+ installations and download only what is missing.
 
-```bash tab="macOS / Linux" tab-group="install-platform"
+```console tab="uv" tab-group="install-method"
+uv tool install --python ">=3.11,<4" "powercontext[cli,server]==0.2.0"
+uv tool update-shell
+```
+
+```bash tab="install.sh (macOS / Linux)" tab-group="install-method"
 curl -fsSL https://powercontext.oceanbase.io/install.sh -o powercontext-install.sh
 bash powercontext-install.sh --no-hosts
 export PATH="$HOME/.local/bin:$PATH"
 ```
 
-```powershell tab="Windows" tab-group="install-platform"
+```powershell tab="install.ps1 (Windows)" tab-group="install-method"
 $env:Path = "$HOME\.local\bin;$env:Path"
 if (-not (Get-Command uv -ErrorAction SilentlyContinue)) {
     Invoke-WebRequest https://astral.sh/uv/install.ps1 -OutFile uv-install.ps1
@@ -27,11 +32,6 @@ if (-not (Get-Command uv -ErrorAction SilentlyContinue)) {
 }
 uv tool install --python ">=3.11,<4" "powercontext[cli,server]==0.2.0"
 $env:Path = "$(uv tool dir --bin);$env:Path"
-```
-
-```console tab="Existing uv" tab-group="install-platform"
-uv tool install --python ">=3.11,<4" "powercontext[cli,server]==0.2.0"
-uv tool update-shell
 ```
 
 All three paths install release `0.2.0`. Reopen the terminal after `uv tool update-shell`; for the script paths, follow any `PATH` command printed by the installer.

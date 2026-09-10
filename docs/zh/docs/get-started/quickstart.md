@@ -13,13 +13,18 @@ description: 安装 PowerContext、配置生成模型、接入 Codex，并在新
 已经安装 uv 时，可在 macOS、Linux 或 Windows 上直接使用；否则运行对应操作系统的安装脚本。Windows 支持状态为 `experimental`。
 系统安装脚本会复用兼容的 uv 和 Python 3.11+，只下载缺少的组件。
 
-```bash tab="macOS / Linux" tab-group="install-platform"
+```console tab="uv" tab-group="install-method"
+uv tool install --python ">=3.11,<4" "powercontext[cli,server]==0.2.0"
+uv tool update-shell
+```
+
+```bash tab="install.sh (macOS / Linux)" tab-group="install-method"
 curl -fsSL https://powercontext.oceanbase.io/install.sh -o powercontext-install.sh
 bash powercontext-install.sh --no-hosts
 export PATH="$HOME/.local/bin:$PATH"
 ```
 
-```powershell tab="Windows" tab-group="install-platform"
+```powershell tab="install.ps1 (Windows)" tab-group="install-method"
 $env:Path = "$HOME\.local\bin;$env:Path"
 if (-not (Get-Command uv -ErrorAction SilentlyContinue)) {
     Invoke-WebRequest https://astral.sh/uv/install.ps1 -OutFile uv-install.ps1
@@ -27,11 +32,6 @@ if (-not (Get-Command uv -ErrorAction SilentlyContinue)) {
 }
 uv tool install --python ">=3.11,<4" "powercontext[cli,server]==0.2.0"
 $env:Path = "$(uv tool dir --bin);$env:Path"
-```
-
-```console tab="已有 uv" tab-group="install-platform"
-uv tool install --python ">=3.11,<4" "powercontext[cli,server]==0.2.0"
-uv tool update-shell
 ```
 
 三种方式都安装 `0.2.0`。运行 `uv tool update-shell` 后重开终端；使用脚本时，按脚本输出的命令更新 `PATH`。

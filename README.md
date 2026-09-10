@@ -24,30 +24,13 @@ You decide what will matter later and what needs to move with the task. PowerCon
 
 ## Works with your agents
 
-On macOS/Linux, the installer reuses existing uv and Python 3.11+ installations and downloads only what is missing:
+Install the latest released [PowerContext](https://pypi.org/project/powercontext/):
 
 ```bash
-curl -fsSL https://powercontext.oceanbase.io/install.sh -o powercontext-install.sh
-bash powercontext-install.sh --no-hosts
-export PATH="$HOME/.local/bin:$PATH"
+uv tool install "powercontext[cli,server]==0.2.0"
 ```
 
-If uv is already installed, the following works on macOS, Linux, and Windows:
-
-```console
-uv tool install --python ">=3.11,<4" "powercontext[cli,server]==0.2.0"
-uv tool update-shell
-```
-
-Both methods install release `0.2.0`. The script path does not require Python or uv beforehand. Reopen the terminal after `uv tool update-shell`, or follow the script's printed `PATH` command. For the Windows installer (`experimental`) and pip, see the [installation guide](https://powercontext.oceanbase.io/en/docs/get-started/install-and-run/).
-
-Create the Server environment file:
-
-```console
-powercontext config init --output .env
-```
-
-Edit `.env` and add a generation model and its credentials before starting the Server. This example uses OpenAI:
+To enable automatic Memory extraction, add these settings to `.env` in the directory where you start the Server and replace the API key (OpenAI example):
 
 ```dotenv
 OPENAI_API_KEY=replace-with-your-api-key
@@ -55,23 +38,26 @@ POWERCONTEXT_SERVER_INFERENCE_GENERATION_MODEL=openai-chat:gpt-4.1-mini
 POWERCONTEXT_SERVER_RUNTIME_SCHEDULE_SECONDS=60
 ```
 
-The Server uses this model to extract Memory from captured Sources. It does not automatically use your Agent's model settings or login credentials. Keep `.env` out of Git. For another provider or vector search, follow [Configure models](https://powercontext.oceanbase.io/en/docs/get-started/configure-models/).
+For other providers and Embedding settings, see [Configure models](https://powercontext.oceanbase.io/en/docs/get-started/configure-models/).
 
-Validate the file and start the Server in its own terminal:
+Start a local Server in its own terminal:
 
 ```bash
-powercontext config validate --env-file .env
-powercontext server run --env-file .env
+powercontext server run
 ```
 
-The Server stores context in local SQLite by default. In another terminal, connect an installed Agent from the same release, for example Codex (requires Git):
+The Server stores context in a local SQLite database by default.
+
+Then set up an agent integration from the matching release. For example:
 
 ```bash
 powercontext setup codex --ref powercontext-v0.2.0
-powercontext doctor codex
 ```
 
-Follow [Quick start](https://powercontext.oceanbase.io/en/docs/get-started/quickstart/) to verify readiness and memory across sessions. See [Configure package indexes](https://powercontext.oceanbase.io/en/docs/get-started/configure-package-index/) if downloads fail.
+Keep the PowerContext tool and agent integration on the same Git ref. For `master` installation, other agents,
+and personal services, follow the [Quick Start](https://powercontext.oceanbase.io/en/docs/get-started/quickstart/)
+and [installation guide](https://powercontext.oceanbase.io/en/docs/get-started/install-and-run/).
+Python 3.11+ is required. macOS and Linux are supported; Windows support is `experimental`.
 
 Codex is `official`; other hosts and Python Agent frameworks are `community`; Bub is `evaluation` only.
 These tags describe PowerContext integration maintenance and use. See the

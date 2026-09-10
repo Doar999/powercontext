@@ -24,30 +24,13 @@ PowerContext 让上下文跟随工作，跨越不同的对话。你回来时，�
 
 ## 与你使用的 Agent 一起工作
 
-在 macOS/Linux 上，安装脚本会复用已有的 uv 和 Python 3.11+，只下载缺少的组件：
+安装最新发布的 [PowerContext](https://pypi.org/project/powercontext/)：
 
 ```bash
-curl -fsSL https://powercontext.oceanbase.io/install.sh -o powercontext-install.sh
-bash powercontext-install.sh --no-hosts
-export PATH="$HOME/.local/bin:$PATH"
+uv tool install "powercontext[cli,server]==0.2.0"
 ```
 
-如果已经安装 uv，可在 macOS、Linux 或 Windows 上直接执行：
-
-```console
-uv tool install --python ">=3.11,<4" "powercontext[cli,server]==0.2.0"
-uv tool update-shell
-```
-
-两种方式都安装发布版 `0.2.0`。脚本方式无需预装 Python 或 uv。运行 `uv tool update-shell` 后重开终端；脚本使用自定义目录时，按其输出设置 `PATH`。Windows 安装脚本（`experimental`）和 pip 方式见[安装指南](https://powercontext.oceanbase.io/zh/docs/get-started/install-and-run/)。
-
-生成 Server 环境文件：
-
-```console
-powercontext config init --output .env
-```
-
-启动 Server 前，编辑 `.env`，加入生成模型与凭据。以下示例使用 OpenAI：
+如需自动抽取 Memory，在启动 Server 的目录下的 `.env` 文件中加入以下配置，并替换 API Key（以 OpenAI 为例）：
 
 ```dotenv
 OPENAI_API_KEY=replace-with-your-api-key
@@ -55,23 +38,26 @@ POWERCONTEXT_SERVER_INFERENCE_GENERATION_MODEL=openai-chat:gpt-4.1-mini
 POWERCONTEXT_SERVER_RUNTIME_SCHEDULE_SECONDS=60
 ```
 
-Server 使用这个模型从采集的 Source 中抽取 Memory，不会自动使用 Agent 的模型配置或登录凭据。不要将 `.env` 提交到 Git。其他服务与向量搜索设置见[配置模型](https://powercontext.oceanbase.io/zh/docs/get-started/configure-models/)。
+其他服务与 Embedding 设置见[配置模型](https://powercontext.oceanbase.io/zh/docs/get-started/configure-models/)。
 
-校验文件，在单独的终端中启动 Server：
+在单独的终端中启动本地 Server：
 
 ```bash
-powercontext config validate --env-file .env
-powercontext server run --env-file .env
+powercontext server run
 ```
 
-Server 默认使用本地 SQLite 保存上下文。在另一个终端中接入同一发布版本的 Agent 集成，例如已安装的 Codex（需要 Git）：
+Server 默认将上下文保存到本地 SQLite 数据库。
+
+然后从同一个发布版本配置 Agent 集成。例如：
 
 ```bash
 powercontext setup codex --ref powercontext-v0.2.0
-powercontext doctor codex
 ```
 
-按[快速开始](https://powercontext.oceanbase.io/zh/docs/get-started/quickstart/)验证模型就绪状态和跨会话记忆。下载失败时，参考[配置安装源](https://powercontext.oceanbase.io/zh/docs/get-started/configure-package-index/)。
+PowerContext 工具与 Agent 集成应始终使用同一个 Git ref。`master` 安装、其他 Agent 和个人服务配置见
+[Quick Start](https://powercontext.oceanbase.io/zh/docs/get-started/quickstart/)和
+[安装指南](https://powercontext.oceanbase.io/zh/docs/get-started/install-and-run/)。
+需要 Python 3.11+。支持 macOS 和 Linux；Windows 支持为 `experimental`。
 
 Codex 标为 `official`，其他宿主及 Python Agent 框架标为 `community`，Bub 标为 `evaluation`，仅用于评测。
 这些标签表示 PowerContext 集成的维护归属和用途，具体功能及可用状态见

@@ -22,31 +22,20 @@ Windows 的宿主与数据库支持取决于各自的平台要求，嵌入式 se
 
 ## 安装应用
 
-可以运行对应操作系统的安装脚本，在任意平台使用已有 uv，或用已有 Python 创建虚拟环境。每种方式都会安装 CLI、Server 和默认 SQLite 后端。
+在 macOS、Linux 或 Windows 上使用 uv 安装。尚未安装 uv 时，选择对应操作系统的脚本。每种方式都会安装 CLI、Server 和默认 SQLite 后端。
 
-```bash tab="自动脚本"
+```console tab="uv" tab-group="install-method"
+uv tool install --python ">=3.11,<4" "powercontext[cli,server]==0.2.0"
+uv tool update-shell
+```
+
+```bash tab="install.sh (macOS / Linux)" tab-group="install-method"
 curl -fsSL https://powercontext.oceanbase.io/install.sh -o powercontext-install.sh
 bash powercontext-install.sh --no-hosts
 export PATH="$HOME/.local/bin:$PATH"
 ```
 
-```console tab="已有 uv（全平台）"
-uv tool install --python ">=3.11,<4" "powercontext[cli,server]==0.2.0"
-uv tool update-shell
-```
-
-```bash tab="pip + venv"
-python3 -m venv .venv
-. .venv/bin/activate
-python -m pip install "powercontext[cli,server]==0.2.0"
-```
-
-pip 路径需要已安装的 Python 3.11+ 和 venv 支持。uv 路径会自动获取缺少的 Python。
-运行 `uv tool update-shell` 后需要重开终端。使用 Bash 脚本和自定义目录时，按脚本输出的命令设置 `PATH`。
-
-Windows 使用以下命令，已有 uv 时会直接复用：
-
-```powershell
+```powershell tab="install.ps1 (Windows)" tab-group="install-method"
 $env:Path = "$HOME\.local\bin;$env:Path"
 if (-not (Get-Command uv -ErrorAction SilentlyContinue)) {
     Invoke-WebRequest https://astral.sh/uv/install.ps1 -OutFile uv-install.ps1
@@ -56,7 +45,20 @@ uv tool install --python ">=3.11,<4" "powercontext[cli,server]==0.2.0"
 $env:Path = "$(uv tool dir --bin);$env:Path"
 ```
 
+运行 `uv tool update-shell` 后重开终端。使用 Bash 脚本和自定义目录时，按脚本输出的命令设置 `PATH`。
+Windows 命令在缺少 uv 时通过其官方 `install.ps1` 安装 uv，再安装 PowerContext。Windows 支持状态为 `experimental`。
+
 uv 的其他安装方式见[官方安装说明](https://docs.astral.sh/uv/getting-started/installation/)。如果 uv/Python 下载或 PyPI 访问失败，按[配置安装源](configure-package-index.md)区分故障位置。
+
+### pip + venv
+
+如果已有 Python 3.11+ 和 venv 支持，也可以使用 pip。以下以 macOS/Linux 为例：
+
+```bash
+python3 -m venv .venv
+. .venv/bin/activate
+python -m pip install "powercontext[cli,server]==0.2.0"
+```
 
 ### 自动脚本的行为
 

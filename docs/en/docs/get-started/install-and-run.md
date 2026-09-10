@@ -22,31 +22,20 @@ On Windows, individual hosts and databases have their own platform requirements.
 
 ## Install the application
 
-Choose the installer for your operating system, use an existing uv installation on any platform, or create a virtual environment from an existing Python installation. Each method installs the CLI, Server, and default SQLite backend.
+Use uv on macOS, Linux, or Windows. If uv is not installed, choose the script for your operating system. Each method installs the CLI, Server, and default SQLite backend.
 
-```bash tab="Install script"
+```console tab="uv" tab-group="install-method"
+uv tool install --python ">=3.11,<4" "powercontext[cli,server]==0.2.0"
+uv tool update-shell
+```
+
+```bash tab="install.sh (macOS / Linux)" tab-group="install-method"
 curl -fsSL https://powercontext.oceanbase.io/install.sh -o powercontext-install.sh
 bash powercontext-install.sh --no-hosts
 export PATH="$HOME/.local/bin:$PATH"
 ```
 
-```console tab="Existing uv (all platforms)"
-uv tool install --python ">=3.11,<4" "powercontext[cli,server]==0.2.0"
-uv tool update-shell
-```
-
-```bash tab="pip + venv"
-python3 -m venv .venv
-. .venv/bin/activate
-python -m pip install "powercontext[cli,server]==0.2.0"
-```
-
-The pip method requires Python 3.11+ with venv support. uv obtains Python if it is missing.
-Reopen the terminal after `uv tool update-shell`. For custom directories, use the `PATH` command printed by the Bash installer.
-
-On Windows, use these commands. They reuse uv when it is already available:
-
-```powershell
+```powershell tab="install.ps1 (Windows)" tab-group="install-method"
 $env:Path = "$HOME\.local\bin;$env:Path"
 if (-not (Get-Command uv -ErrorAction SilentlyContinue)) {
     Invoke-WebRequest https://astral.sh/uv/install.ps1 -OutFile uv-install.ps1
@@ -56,8 +45,21 @@ uv tool install --python ">=3.11,<4" "powercontext[cli,server]==0.2.0"
 $env:Path = "$(uv tool dir --bin);$env:Path"
 ```
 
+Reopen the terminal after `uv tool update-shell`. For custom directories, use the `PATH` command printed by the Bash installer.
+The Windows commands install uv through its official `install.ps1` when needed, then install PowerContext. Windows support is `experimental`.
+
 See the [uv installation guide](https://docs.astral.sh/uv/getting-started/installation/) for other ways to obtain uv.
 If uv, Python, or PyPI downloads fail, use [Configure package indexes](configure-package-index.md) to identify which service failed.
+
+### pip + venv
+
+With Python 3.11+ and venv support already installed, you can also use pip. For example, on macOS/Linux:
+
+```bash
+python3 -m venv .venv
+. .venv/bin/activate
+python -m pip install "powercontext[cli,server]==0.2.0"
+```
 
 ### Installer behavior
 
