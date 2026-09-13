@@ -17,8 +17,10 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import secrets
 from collections.abc import Awaitable, Callable, Mapping
+from contextlib import nullcontext
 from dataclasses import dataclass, replace
 from typing import TYPE_CHECKING, Any, cast
 from uuid import uuid4
@@ -32,7 +34,7 @@ from referencing.exceptions import Unresolvable
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncConnection
 
-from powercontext.artifacts import Artifact, ArtifactRef
+from powercontext.artifacts import Artifact, ArtifactRef, MemoryCitation
 from powercontext.builtin.artifacts.experience import (
     EXPERIENCE_INCUBATION_CURSOR_NAME,
     Experience,
@@ -99,6 +101,10 @@ from powercontext.builtin.artifacts.topic_memory import (
     TopicMemorySearchResult,
 )
 from powercontext.builtin.context import BuiltinArtifacts, BuiltinSources
+from powercontext.builtin.dream.generation import DreamGenerator
+from powercontext.builtin.dream.models import DreamBudget, DreamOperation
+from powercontext.builtin.dream.service import CandidateAttester, DreamAuthorizer, DreamService
+from powercontext.builtin.evidence.resolver import AuthorizationContext, EvidenceAuthorizer, EvidenceResolver
 from powercontext.builtin.inference import EmbeddingModel, InvalidInferenceOutputError, TokenEstimator
 from powercontext.builtin.persistence.agent_skill_targets import RemoteAgentSkillTargetRepository
 from powercontext.builtin.persistence.artifact_governance import (
@@ -106,6 +112,7 @@ from powercontext.builtin.persistence.artifact_governance import (
     ArtifactGovernanceRepository,
     ArtifactLifecycleState,
 )
+from powercontext.builtin.persistence.artifact_readers import TopicMemoryArtifactListReader
 from powercontext.builtin.persistence.artifacts import ArtifactRepository
 from powercontext.builtin.persistence.candidates import CandidateRepository
 from powercontext.builtin.persistence.connectors import ConnectorCheckpointRepository
@@ -330,6 +337,25 @@ class _ScopedServices:
             id_factory=self.id_factory,
         )
 
+    def evidence(self, authorize: EvidenceAuthorizer | None = None) -> EvidenceResolver:
+        async def read_memory(connection: AsyncConnection, citation: MemoryCitation):
+            _, catalog = self.sources(connection)
+            return await self.memory(catalog, connection).validate_citation(citation)
+
+        return EvidenceResolver(
+            scope_id=self.scope_id,
+            sources=self.repositories.sources,
+            artifacts=self.repositories.artifacts,
+            memory_reader=read_memory,
+            authorize=authorize,
+            source_projector=lambda source: json.dumps(
+                self.source_registry.project(source, TEXT_EVIDENCE_PROJECTION_KEY),
+                ensure_ascii=False,
+                sort_keys=True,
+                separators=(",", ":"),
+            ),
+        )
+
     def review(self, connection: AsyncConnection | None = None) -> ReviewService:
         return ReviewService(
             database=self.database,
@@ -340,6 +366,7 @@ class _ScopedServices:
             skill_packages=self.repositories.skill_packages,
             sources=self.generation_sources(),
             id_factory=self.id_factory,
+            evidence=self.evidence(),
             connection=connection,
         )
 
@@ -469,6 +496,7 @@ class RelationalContexts:
             (Handoff, Memory, Experience, Skill, Profile, Prompt, TopicMemory),
             sources=source_repository,
         )
+        topic_memory_repository = TopicMemoryRepository(artifacts=artifact_repository, index=self.topic_memory_index)
         self.repositories = _Repositories(
             sources=source_repository,
             artifacts=artifact_repository,
@@ -489,7 +517,7 @@ class RelationalContexts:
             processing_pending=ArtifactProcessingPendingRepository(),
             processing_leases=ArtifactProcessingLeaseRepository(),
             processing_binding_states=ArtifactProcessingBindingStateRepository(),
-            topic_memories=TopicMemoryRepository(artifacts=artifact_repository, index=self.topic_memory_index),
+            topic_memories=topic_memory_repository,
         )
         self._id_factory = _scoped_id_factory(memory_artifact_id, id_factory)
         self.prompt_registry = prompt_registry or PromptRegistry(
@@ -544,6 +572,7 @@ class RelationalContexts:
             self.repositories.artifacts,
             self.repositories.candidates,
             id_factory=id_factory,
+            prompt_service=self.prompts,
         )
         self.subject_sources = SubjectSourceService(database, self.repositories.sources)
         self.records = RelationalRecordService(
@@ -555,6 +584,11 @@ class RelationalContexts:
             cursor_secret=cursor_secret,
             processing_pending=self.repositories.processing_pending,
             source_processing_bindings=(TOPIC_MEMORY_SOURCE_WINDOW_BINDING,),
+            topic_memory_list_reader=TopicMemoryArtifactListReader(
+                database=database,
+                artifacts=artifact_repository,
+                topics=topic_memory_repository,
+            ),
         )
         self.publications = ArtifactPublicationApplication(
             database,
@@ -610,6 +644,33 @@ class RelationalContexts:
         """Return Candidate and reviewed Artifact operations bound to one scope."""
 
         return self._services_for(scope_id).review()
+
+    def dream(
+        self,
+        generator: DreamGenerator | None,
+        *,
+        budget: DreamBudget,
+        max_pending_per_scope: int,
+        authorize: DreamAuthorizer | None = None,
+        authorization_context: AuthorizationContext = nullcontext,
+        attest_candidate: CandidateAttester | None = None,
+        operations: tuple[DreamOperation, ...] = (),
+        processing: ScopeInvocation | None = None,
+    ) -> DreamService:
+        return DreamService(
+            database=self.database,
+            artifacts=self.repositories.artifacts,
+            evidence=lambda scope_id, authorizer: self._services_for(scope_id).evidence(authorizer),
+            review=lambda scope_id, connection: self._services_for(scope_id).review(connection),
+            generator=generator,
+            budget=budget,
+            max_pending_per_scope=max_pending_per_scope,
+            authorize=authorize,
+            authorization_context=authorization_context,
+            attest_candidate=attest_candidate,
+            operations=operations,
+            processing=processing,
+        )
 
     def generation(self, scope_id: str, /) -> ReviewedGenerationService:
         """Return model-backed reviewed generation bound to one scope."""
